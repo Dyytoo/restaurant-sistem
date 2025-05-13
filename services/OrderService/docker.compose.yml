@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8002:8000"
+    environment:
+      - MENU_SERVICE_URL=http://menu-service:8000
+      - USER_SERVICE_URL=http://user-service:8000
+      - QUEUE_CONNECTION=redis
+    depends_on:
+      - mysql
+      - redis
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: menu_service
+    volumes:
+      - ../shared/database/menu:/var/lib/mysql
+
+  redis:
+    image: redis:alpine
+    volumes:
+      - ../shared/redis/menu:/data
+
+  queue:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    command: php artisan queue:work --tries=3
+    depends_on:
+      - app
+      - redis
